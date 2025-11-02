@@ -182,7 +182,7 @@ Would you like more interview questions or help with anything else?
       `;
     }
     
-    // PRIORITY 3: Conversational response using Llama
+    // PRIORITY 3: Conversational response using Qwen2.5-Coder
     // Provide better context about what we already have
     let contextSummary = '';
     if (hasJobDescription) {
@@ -195,16 +195,22 @@ Would you like more interview questions or help with anything else?
       contextSummary += '\n[CONTEXT: Resume analysis has been completed and shown to user]';
     }
     
-    const response = await fetch('http://127.0.0.1:11434/api/generate', {
+    const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer lm-studio',
       },
       body: JSON.stringify({
-        model: 'llama3.1:8b',
-        prompt: `You are an intelligent AI Career Agent powered by Llama 3.1. You are helpful, friendly, and professional. You excel at analyzing resumes, matching skills, and helping candidates prepare for interviews.
-
-Your capabilities:
+        model: 'qwen2.5-coder-7b-instruct',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an intelligent AI Career Agent powered by Qwen2.5-Coder-7B. You are helpful, friendly, and professional. You excel at analyzing resumes, matching skills, and helping candidates prepare for interviews.'
+          },
+          {
+            role: 'user',
+            content: `Your capabilities:
 - Analyze resumes against job descriptions to provide match scores and skill gap analysis
 - Generate targeted interview questions based on job requirements (as many as needed!)
 - Provide career advice and guidance
@@ -224,22 +230,20 @@ IMPORTANT INSTRUCTIONS:
 - Don't repeat information the user already provided
 - Use emojis sparingly
 
-Respond naturally to continue the conversation:`,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          num_predict: 300,
-          num_ctx: 4096, // Increased context window for Llama
-        },
+Respond naturally to continue the conversation:`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.statusText}`);
+      throw new Error(`LM Studio API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.response.trim();
+    return data.choices[0].message.content.trim();
   }
 );
 

@@ -21,7 +21,8 @@ export default function Home() {
       const userRole = sessionStorage.getItem('userRole');
       if (userRole === 'company') {
         router.push('/company/dashboard');
-      } else if (userRole === 'coach' || !userRole) {
+      } else {
+        // For coach, individual, or any other role -> go to analyzer
         router.push('/analyze');
       }
     } else {
@@ -40,7 +41,7 @@ export default function Home() {
         </p>
         <div className="mt-10">
           <Button onClick={handleGetStarted} size="lg" className="font-bold">
-            {isLoggedIn ? 'Go to Dashboard' : 'Get Started for Free'} <ArrowRight className="ml-2" />
+            {isLoggedIn ? (sessionStorage.getItem('userRole') === 'company' ? 'Go to Dashboard' : 'Go to Analyzer') : 'Get Started for Free'} <ArrowRight className="ml-2" />
           </Button>
         </div>
       </div>

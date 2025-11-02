@@ -23,7 +23,7 @@ export default function AgentPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
         role: 'model',
-        content: "👋 Hello! I'm your **AI Career Agent** powered by Llama 3.1.\n\nI can help you:\n- 📊 Analyze your resume against job descriptions\n- 🎯 Identify skill gaps and strengths\n- 💼 Generate interview practice questions\n- 🚀 Provide career guidance\n\n**To get started:** Share a job description you're interested in, then upload your resume for analysis!"
+        content: "👋 Hello! I'm your **AI Career Agent** powered by Qwen2.5-Coder 7B.\n\nI can help you:\n- 📊 Analyze your resume against job descriptions\n- 🎯 Identify skill gaps and strengths\n- 💼 Generate interview practice questions\n- 🚀 Provide career guidance\n\n**To get started:** Share a job description you're interested in, then upload your resume for analysis!"
     }
   ]);
   const [input, setInput] = useState('');
@@ -184,7 +184,7 @@ export default function AgentPage() {
             <Bot className="text-primary" /> AI Career Agent
           </CardTitle>
           <CardDescription>
-            Powered by <span className="font-semibold text-foreground">Llama 3.1</span> • Chat with our AI agent to analyze your resume against job descriptions and prepare for interviews.
+            Powered by <span className="font-semibold text-foreground">Qwen2.5-Coder 7B</span> • Chat with our AI agent to analyze your resume against job descriptions and prepare for interviews.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">

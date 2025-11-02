@@ -1,17 +1,12 @@
 import {genkit} from 'genkit';
-import {ollama} from 'genkitx-ollama';
+import {openAI} from 'genkitx-openai';
 
 export const ai = genkit({
   plugins: [
-    ollama({
-      models: [
-        {
-          name: 'llama3.1:8b',
-          type: 'chat',
-        },
-      ],
-      serverAddress: 'http://127.0.0.1:11434',
+    openAI({
+      apiKey: 'lm-studio', // LM Studio doesn't require a real API key
+      baseURL: 'http://192.168.0.105:1234/v1',
     }),
   ],
-  model: 'ollama/llama3.1:8b',
+  model: 'openai/qwen2.5-coder-7b-instruct',
 });

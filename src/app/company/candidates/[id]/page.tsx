@@ -29,6 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -41,8 +42,8 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  Filter,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface CandidateResult {
@@ -116,11 +117,12 @@ export default function CandidatesPage() {
     }
   };
 
-  const handleFilterChange = (value: number) => {
-    setMinScore(value);
+  const handleFilterChange = (value: number[]) => {
+    const score = value[0];
+    setMinScore(score);
     if (batchData) {
       setFilteredResults(
-        batchData.results.filter((r) => r.matchScore >= value)
+        batchData.results.filter((r) => r.matchScore >= score)
       );
     }
   };
@@ -279,30 +281,57 @@ export default function CandidatesPage() {
         {/* Filter */}
         <Card>
           <CardHeader>
-            <CardTitle>Filter Candidates</CardTitle>
-            <CardDescription>
-              Show only candidates with a minimum match score
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Label htmlFor="minScore" className="whitespace-nowrap">
-                Min Score: {minScore}%
-              </Label>
-              <Input
-                id="minScore"
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={minScore}
-                onChange={(e) => handleFilterChange(parseInt(e.target.value))}
-                className="flex-1"
-              />
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Filter Candidates</CardTitle>
+                <CardDescription>
+                  Show only candidates with a minimum match score
+                </CardDescription>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredResults.length} of {batchData.results.length} candidates
-            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="minScore" className="text-base font-medium">
+                  Minimum Match Score
+                </Label>
+                <Badge variant="secondary" className="text-base font-bold px-3 py-1">
+                  {minScore}%
+                </Badge>
+              </div>
+              <Slider
+                id="minScore"
+                min={0}
+                max={100}
+                step={5}
+                value={[minScore]}
+                onValueChange={handleFilterChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing <span className="font-semibold text-foreground">{filteredResults.length}</span> of <span className="font-semibold text-foreground">{batchData.results.length}</span> candidates
+              </p>
+              {minScore > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFilterChange([0])}
+                >
+                  Reset Filter
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

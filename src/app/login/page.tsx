@@ -68,16 +68,16 @@ export default function LoginPage() {
 
       toast({
         title: "Login Successful",
-        description: "Welcome back! Redirecting...",
+        description: `Welcome back! Redirecting to ${data.user.role === 'company' ? 'dashboard' : 'analyzer'}...`,
       });
 
       // Redirect based on role
       if (data.user.role === 'company') {
         router.push('/company/dashboard');
       } else if (data.user.role === 'coach') {
-        router.push('/'); // For now, coaches go to home (can add coach dashboard later)
+        router.push('/analyze'); // Coaches go to analyzer
       } else {
-        router.push('/');
+        router.push('/analyze'); // Individual users go to analyzer
       }
       router.refresh(); // Force a refresh to update navbar state
     } catch (error: any) {

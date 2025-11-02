@@ -18,18 +18,35 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       
       pdfParser.on('pdfParser_dataReady', (pdfData: any) => {
         try {
-          // Extract text from all pages
+          // Extract text from all pages with better spacing
           let text = '';
           if (pdfData.Pages) {
-            pdfData.Pages.forEach((page: any) => {
+            pdfData.Pages.forEach((page: any, pageIndex: number) => {
               if (page.Texts) {
-                page.Texts.forEach((textItem: any) => {
+                // Sort texts by Y position (top to bottom) then X position (left to right)
+                const sortedTexts = page.Texts.sort((a: any, b: any) => {
+                  const yDiff = a.y - b.y;
+                  if (Math.abs(yDiff) < 0.1) { // Same line
+                    return a.x - b.x;
+                  }
+                  return yDiff;
+                });
+                
+                let lastY = -1;
+                sortedTexts.forEach((textItem: any) => {
                   if (textItem.R) {
+                    // Add newline if we moved to a new line
+                    if (lastY !== -1 && Math.abs(textItem.y - lastY) > 0.1) {
+                      text += '\n';
+                    }
+                    lastY = textItem.y;
+                    
                     textItem.R.forEach((r: any) => {
                       if (r.T) {
                         try {
-                          // Try to decode, but if it fails, use the raw text
-                          text += decodeURIComponent(r.T) + ' ';
+                          // Decode and add space after each text element
+                          const decoded = decodeURIComponent(r.T);
+                          text += decoded + ' ';
                         } catch (decodeError) {
                           // If decoding fails, use the raw text
                           text += r.T + ' ';
@@ -39,12 +56,19 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
                   }
                 });
               }
-              text += '\n';
+              // Add double newline between pages
+              if (pageIndex < pdfData.Pages.length - 1) {
+                text += '\n\n';
+              }
             });
           }
           
+          // Clean up multiple spaces and normalize whitespace
+          text = text.replace(/\s+/g, ' ').trim();
+          
           console.log('PDF extraction successful, text length:', text.length);
-          resolve(text.trim());
+          console.log('First 500 chars:', text.substring(0, 500));
+          resolve(text);
         } catch (error) {
           reject(new Error(`Failed to process PDF data: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
@@ -59,22 +83,102 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   });
 }
 
+// Helper function to validate if document is a resume
+async function isValidResume(documentText: string): Promise<boolean> {
+  try {
+    console.log('Validating if document is a resume...');
+    
+    // Check if document has minimum length
+    if (documentText.length < 100) {
+      console.log('Document too short to be a resume');
+      return false;
+    }
+
+    const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer lm-studio',
+      },
+      body: JSON.stringify({
+        model: 'qwen2.5-coder-7b-instruct',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a document classifier. Your job is to determine if a document is a resume/CV or not. A resume typically contains: contact information, work experience, education, skills, and professional summary. Respond with only "true" or "false".'
+          },
+          {
+            role: 'user',
+            content: `Analyze this document and determine if it is a resume or CV. Look for typical resume sections like:
+- Contact information (name, email, phone)
+- Work experience or employment history
+- Education background
+- Skills section (technical, soft skills)
+- Professional summary or objective
+
+Documents that are NOT resumes include: project reports, academic papers, hackathon reports, research papers, articles, letters, invoices, etc.
+
+DOCUMENT TEXT:
+${documentText.substring(0, 2000)}
+
+Respond with ONLY "true" if this is a resume/CV, or "false" if it is not. No other text.`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 10,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('Resume validation failed, defaulting to false');
+      return false;
+    }
+
+    const data = await response.json();
+    const result = data.choices[0].message.content.trim().toLowerCase();
+    const isResume = result.includes('true');
+    
+    console.log('Resume validation result:', isResume);
+    return isResume;
+  } catch (error) {
+    console.error('Resume validation error:', error);
+    return false; // Default to false if validation fails
+  }
+}
+
 // Helper function to analyze a resume against job description
 async function analyzeResume(resumeText: string, jobDescription: string): Promise<any> {
   try {
     console.log('Starting AI analysis, resume length:', resumeText.length);
     
-    const response = await fetch('http://127.0.0.1:11434/api/generate', {
+    const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer lm-studio',
+      },
       body: JSON.stringify({
-        model: 'llama3.1:8b',
-        prompt: `You are an expert resume analyzer. Analyze this resume against the job description and provide a detailed assessment.
+        model: 'qwen2.5-coder-7b-instruct',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert resume analyzer. You carefully read the entire resume text and identify ALL skills mentioned, including programming languages, frameworks, and technologies. You are thorough and do not miss any skills.'
+          },
+          {
+            role: 'user',
+            content: `Carefully analyze this resume against the job description. READ THE ENTIRE RESUME TEXT CAREFULLY to identify ALL skills present.
+
+IMPORTANT INSTRUCTIONS:
+- Look for skills anywhere in the resume text (skills section, experience, projects, education)
+- Consider variations (e.g., "HTML5" matches "HTML", "CSS3" matches "CSS", "Python 3" matches "Python")
+- Look for skills in context (e.g., "built with Python", "using HTML/CSS", "developed in JavaScript")
+- Be thorough - don't mark skills as missing if they appear ANYWHERE in the resume text
+- Case-insensitive matching (HTML = html = Html)
 
 JOB DESCRIPTION:
 ${jobDescription}
 
-RESUME:
+RESUME TEXT (Read carefully from start to end):
 ${resumeText}
 
 Provide your analysis in the following JSON format (respond ONLY with valid JSON, no other text):
@@ -86,22 +190,23 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
   "impliedSkills": ["skill1", "skill2"],
   "strengths": ["strength1", "strength2"],
   "recommendations": ["recommendation1", "recommendation2"]
-}`,
-        stream: false,
-        options: {
-          temperature: 0.3,
-          num_predict: 500,
-        }
+}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('LM Studio API error response:', errorText);
+      throw new Error(`LM Studio API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
     console.log('AI response received');
-    const analysisText = data.response;
+    const analysisText = data.choices[0].message.content;
     
     // Extract JSON from response
     const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
@@ -179,6 +284,38 @@ export async function POST(request: Request) {
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
         const resumeText = await extractTextFromPDF(buffer);
+        
+        // Validate if document is a resume
+        const isResume = await isValidResume(resumeText);
+        
+        if (!isResume) {
+          console.log(`${file.name} is not a valid resume, assigning 0% score`);
+          results.push({
+            fileName: file.name,
+            matchScore: 0,
+            status: 'Not a Match',
+            matchingSkills: [],
+            missingSkills: [],
+            impliedSkills: [],
+            strengths: [],
+            recommendations: ['This document does not appear to be a resume or CV. Please upload a valid resume.'],
+            extractedText: resumeText.substring(0, 5000),
+            processedAt: new Date(),
+          });
+          processedCount++;
+          
+          // Update progress
+          await db.collection('batchAnalyses').updateOne(
+            { _id: batchId },
+            { 
+              $set: { 
+                processedResumes: processedCount,
+                results: results 
+              } 
+            }
+          );
+          continue; // Skip to next file
+        }
         
         // Analyze resume
         const analysis = await analyzeResume(resumeText, job.description);

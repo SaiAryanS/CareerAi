@@ -1,6 +1,6 @@
 # CareerPilot AI: Resume Analyzer & Career Tool
 
-CareerPilot AI is an intelligent web application powered by **Llama 3.1** that helps job seekers analyze their resumes, practice for interviews, and improve their candidacy. By leveraging local AI models through Ollama, it provides detailed resume analysis, mock interview simulations, and a full-featured admin dashboard—all while keeping your data private.
+CareerPilot AI is an intelligent web application powered by **Qwen2.5-Coder 7B** that helps job seekers analyze their resumes, practice for interviews, and improve their candidacy. By leveraging local AI models through LM Studio, it provides detailed resume analysis, mock interview simulations, and a full-featured admin dashboard—all while keeping your data private.
 
 ## 🌟 Core Features
 
@@ -11,15 +11,18 @@ CareerPilot AI is an intelligent web application powered by **Llama 3.1** that h
 - Complete registration and login system with password hashing (bcryptjs)
 - Secure admin panel with separate authentication
 
-### 🏢 **Company Dashboard & Bulk Analysis** (NEW v2.1)
+### 🏢 **Company Dashboard & Bulk Analysis** (NEW v2.3)
 - **Bulk Resume Upload**: Process up to 50 resumes at once against a job description
-- **Private Job Postings**: Create company-specific job descriptions
+- **Resume Validation**: AI automatically detects and rejects non-resume documents (0% score)
+- **Job Management**: Create, view, edit, and delete company-specific job postings
+- **Private Job Postings**: Company-specific job descriptions not visible to other users
 - **AI-Powered Ranking**: Automatically rank candidates by match score
 - **Batch Processing**: Track progress of bulk analysis in real-time
-- **Analytics Dashboard**: View hiring insights and statistics
-- **Candidate Management**: Filter, sort, and export top candidates
+- **Analytics Dashboard**: View hiring insights and statistics powered by AI
+- **Advanced Filtering**: Modern slider UI to filter candidates by minimum score
+- **Candidate Management**: Filter, sort, and export top candidates to CSV
 
-### 🤖 **Intelligent AI Career Agent** (Powered by Llama 3.1)
+### 🤖 **Intelligent AI Career Agent** (Powered by Qwen2.5-Coder 7B)
 - **Natural Conversation Flow**: Engage in back-and-forth dialogue for resume analysis and interview prep
 - **Smart Context Retention**: Remembers job descriptions and resumes throughout the conversation (no repeated questions!)
 - **Autonomous Decision Making**: Intelligently determines when to analyze resumes or generate interview questions
@@ -63,8 +66,8 @@ CareerPilot AI is an intelligent web application powered by **Llama 3.1** that h
 -   **Frontend**: [Next.js](https://nextjs.org/) 15.3.3 with React 18 & TypeScript
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/) with [ShadCN UI](https://ui.shadcn.com/) components
 -   **AI Framework**: [Genkit](https://firebase.google.com/docs/genkit) for AI flow orchestration
--   **LLM Provider**: [Ollama](https://ollama.com/) with **Llama 3.1 8B** model (local, private)
--   **PDF Parsing**: [pdf2json](https://www.npmjs.com/package/pdf2json) for reliable PDF text extraction in Node.js
+-   **LLM Provider**: [LM Studio](https://lmstudio.ai/) with **Qwen2.5-Coder 7B** model (local, private)
+-   **PDF Parsing**: [pdf2json](https://www.npmjs.com/package/pdf2json) & [pdf.js](https://mozilla.github.io/pdf.js/) for reliable PDF text extraction
 -   **Database**: [MongoDB](https://www.mongodb.com/) for storing users, jobs, and analysis history
 -   **Authentication**: Custom implementation with `bcryptjs` password hashing
 -   **Speech Recognition**: Web Speech API for voice input
@@ -108,8 +111,7 @@ Follow these instructions to set up and run the project locally.
 
 -   [Node.js](https://nodejs.org/en) (version 18 or higher)
 -   npm or yarn
--   [Ollama](https://ollama.com/) installed and running locally
--   **Llama 3.1 8B** model (or compatible model) pulled in Ollama
+-   [LM Studio](https://lmstudio.ai/) installed with **Qwen2.5-Coder 7B** model loaded
 -   MongoDB database (local installation or [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) cloud instance)
 
 ### Installation
@@ -125,24 +127,30 @@ Follow these instructions to set up and run the project locally.
     npm install
     ```
 
-3.  **Set up Ollama and Llama 3.1:**
+3.  **Set up LM Studio with Qwen2.5-Coder 7B:**
+    
+    a. **Download and install LM Studio:**
+       - Visit [https://lmstudio.ai/](https://lmstudio.ai/)
+       - Download for your operating system
+       - Install and launch LM Studio
+    
+    b. **Download Qwen2.5-Coder 7B model:**
+       - In LM Studio, go to the "Search" tab
+       - Search for "qwen2.5-coder-7b-instruct"
+       - Download the model (GGUF format recommended)
+       - Wait for download to complete
+    
+    c. **Load and start the model:**
+       - Go to the "Local Server" tab in LM Studio
+       - Select "qwen2.5-coder-7b-instruct" from the model dropdown
+       - Click "Start Server"
+       - Ensure server is running on `http://localhost:1234` (default)
+    
+    **Verify LM Studio is running:**
     ```bash
-    # Install Ollama from https://ollama.com/
-    
-    # Pull the Llama 3.1 8B model
-    ollama pull llama3.1:8b
-    
-    # Start Ollama server (if not already running)
-    ollama serve
+    curl http://localhost:1234/v1/models
     ```
-    
-    Ollama will run on `http://127.0.0.1:11434` by default.
-    
-    **Verify Ollama is running:**
-    ```bash
-    curl http://127.0.0.1:11434/api/tags
-    ```
-    You should see `llama3.1:8b` in the list of models.
+    You should see the qwen2.5-coder model in the response.
 
 4.  **Set up environment variables:**
     Create a `.env` file in the root of your project:
@@ -167,12 +175,12 @@ Follow these instructions to set up and run the project locally.
 
 ### Running the Application
 
-1.  **Ensure Ollama is running with Llama 3.1:**
-    ```bash
-    ollama serve
-    ```
-    
-    The Ollama server should be accessible at `http://127.0.0.1:11434`
+1.  **Ensure LM Studio server is running:**
+    - Open LM Studio
+    - Go to "Local Server" tab
+    - Ensure qwen2.5-coder-7b-instruct is loaded
+    - Server should be running on `http://localhost:1234`
+    - Keep LM Studio running in the background
 
 2.  **Start the development server:**
     ```bash
@@ -184,7 +192,7 @@ Follow these instructions to set up and run the project locally.
     - Admin Panel: `http://localhost:9002/admin/login`
 
 4.  **First-time setup:**
-    - Register a user account
+    - Register a user account (individual, company, or coach)
     - Log in with admin credentials to add job descriptions
     - Users can then analyze resumes against these jobs
 
@@ -272,53 +280,56 @@ Career coaches have access to all individual features and can:
 
 ## ⚙️ Configuration
 
-### Using Different Ollama Models
+### Using Different LM Studio Models
 
-The application uses **Llama 3.1 8B** by default. To use a different model:
+The application uses **Qwen2.5-Coder 7B** by default. To use a different model:
 
-1. **Pull the desired model:**
-   ```bash
-   ollama pull <model-name>
-   # Examples:
-   # ollama pull qwen2.5-coder:7b
-   # ollama pull mistral:7b
-   ```
+1. **Load the desired model in LM Studio:**
+   - Download a compatible model (7B-13B recommended for balance of speed/quality)
+   - Load it in the Local Server tab
+   - Note the model name shown in LM Studio
 
-2. **Update `src/ai/genkit.ts`:**
-   ```typescript
-   export const ai = genkit({
-     plugins: [
-       ollama({
-         models: [
-           {
-             name: '<model-name>',
-             type: 'chat',
-           },
-         ],
-         serverAddress: 'http://127.0.0.1:11434',
-       }),
-     ],
-     model: 'ollama/<model-name>',
-   });
-   ```
-
-3. **Update model references in flow files:**
-   - `src/ai/flows/skill-matching.ts` (line ~90)
+2. **Update model references in flow files:**
+   
+   The application makes direct API calls to LM Studio. Update the model name in:
+   - `src/ai/flows/skill-matching.ts` (around line 92)
    - `src/ai/flows/interview-flow.ts`
-   - `src/ai/flows/agent-flow.ts` (line ~211)
+   - `src/ai/flows/agent-flow.ts` (around line 213)
+   - `src/app/api/company/batch-upload/route.ts` (around line 162)
+   
+   Change:
+   ```typescript
+   model: 'qwen2.5-coder-7b-instruct'
+   ```
+   
+   To your model name:
+   ```typescript
+   model: 'your-model-name'
+   ```
 
-### Adjusting Context Window
+3. **Recommended models:**
+   - **Qwen2.5-Coder 7B**: Best for code/technical resumes (current default)
+   - **Llama 3.1 8B**: Good general-purpose alternative
+   - **Mistral 7B**: Fast and efficient
+   - **Phi-3 Medium**: Compact but capable
 
-For better conversation memory, adjust the Llama context:
+### Adjusting LM Studio Settings
 
-In `src/ai/flows/agent-flow.ts`:
-```typescript
-options: {
-  temperature: 0.7,
-  num_predict: 300,
-  num_ctx: 4096,  // Default: 4096 tokens (adjust based on your needs)
-}
-```
+For better performance, adjust settings in LM Studio's Local Server tab:
+
+**Context Length:**
+- Default: 4096 tokens
+- For longer resumes: increase to 8192 or higher
+- Balance between memory usage and context
+
+**Temperature:**
+- Default: 0.3-0.7 (depending on task)
+- Lower (0.1-0.3): More consistent, factual analysis
+- Higher (0.7-0.9): More creative interview questions
+
+**GPU Layers:**
+- Max out for fastest performance
+- Reduce if experiencing memory issues
 
 ### PDF Parsing Configuration
 
@@ -372,17 +383,28 @@ CareerPilot-AI-Resume-Analyzer/
 
 ## 🐛 Troubleshooting
 
-### Ollama Connection Issues
+### LM Studio Connection Issues
 ```bash
-# Check if Ollama is running
-curl http://127.0.0.1:11434/api/tags
+# Check if LM Studio server is running
+curl http://localhost:1234/v1/models
 
-# Restart Ollama
-ollama serve
+# Verify server status in LM Studio:
+# 1. Open LM Studio
+# 2. Go to "Local Server" tab
+# 3. Check server is started and shows green status
+# 4. Confirm port is 1234 (default)
 
-# Verify model is available
-ollama list
+# If connection fails:
+# - Restart LM Studio server
+# - Check firewall settings
+# - Ensure no other service is using port 1234
 ```
+
+### Document Validation Issues
+- The system now validates if uploaded documents are actual resumes
+- Non-resume documents (reports, papers, etc.) will receive 0% score automatically
+- Resumes should contain: work experience, education, skills, and contact info
+- If a valid resume gets 0%, check that it has clear resume sections
 
 ### PDF Parsing Issues
 - Ensure PDF contains selectable text (not scanned images)
@@ -414,7 +436,15 @@ echo $MONGODB_URI
 
 ## 🔄 Recent Improvements
 
-### v2.2 - Enhanced Bulk Processing (Latest)
+### v2.3 - Enhanced UI & Resume Validation (Latest)
+- ✅ **Resume Validation**: AI-powered document classification to ensure only resumes are analyzed
+- ✅ **Non-Resume Detection**: Automatically assigns 0% to reports, papers, and other non-resume documents
+- ✅ **Improved Filter UI**: Modern slider component for candidate filtering with visual indicators
+- ✅ **Job Management**: Full CRUD operations for company job postings with view/edit pages
+- ✅ **Better Branding**: Updated all references to show "Qwen2.5-Coder 7B" instead of outdated model names
+- ✅ **Enhanced UX**: Reset filter button, score badges, and improved visual hierarchy
+
+### v2.2 - Enhanced Bulk Processing
 - ✅ **Improved PDF Parsing**: Migrated from pdf-parse to pdf2json for better Next.js compatibility
 - ✅ **Robust Error Handling**: Automatic fallback for malformed URI encoding in PDFs
 - ✅ **Better Compatibility**: Handles various PDF formats and encodings gracefully
@@ -449,10 +479,11 @@ echo $MONGODB_URI
 - ✅ **Page Break Markers**: Clear separation between pages
 
 ### v2.0 - Better User Experience
-- ✅ **Clearer Visual Indicators**: "Powered by Llama 3.1" branding
+- ✅ **Clearer Visual Indicators**: "Powered by Qwen2.5-Coder 7B" branding
 - ✅ **Enhanced Welcome Message**: Shows agent capabilities upfront
 - ✅ **Markdown Formatting**: Professional-looking analysis results
 - ✅ **Encouraging Prompts**: Invites users to continue practicing
+- ✅ **LM Studio Integration**: Migrated from Ollama to LM Studio for better stability
 
 ## 🤝 Contributing
 
@@ -464,19 +495,10 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- [Ollama](https://ollama.com/) for making local LLMs accessible
-- [Meta AI](https://ai.meta.com/) for Llama 3.1
+- [LM Studio](https://lmstudio.ai/) for making local LLMs accessible and easy to use
+- [Alibaba Cloud](https://github.com/QwenLM) for Qwen2.5-Coder model
 - [Firebase Genkit](https://firebase.google.com/docs/genkit) for AI orchestration
-- [pdf2json](https://www.npmjs.com/package/pdf2json) for reliable PDF parsing
+- [pdf2json](https://www.npmjs.com/package/pdf2json) & [pdf.js](https://mozilla.github.io/pdf.js/) for reliable PDF parsing
 - [ShadCN UI](https://ui.shadcn.com/) for beautiful components
+- [Radix UI](https://www.radix-ui.com/) for accessible UI primitives
 
-## 📞 Support
-
-For issues and questions:
-- Create an issue in the GitHub repository
-- Check the troubleshooting section above
-- Refer to documentation files in `/docs`
-
----
-
-**Built with ❤️ using Llama 3.1 and Next.js**

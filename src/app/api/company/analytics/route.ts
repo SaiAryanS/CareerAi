@@ -96,7 +96,7 @@ export async function GET(request: Request) {
       jobTitles: jobs.map(j => j.title),
     };
 
-    // Generate AI insights using Llama
+    // Generate AI insights using Qwen2.5-Coder
     let aiInsights = "No insights available yet. Analyze more candidates to generate insights.";
     
     if (totalCandidates > 0) {
@@ -124,7 +124,7 @@ Provide insights about:
 Format as bullet points, each starting with "•". Keep it professional and actionable.`;
 
         const result = await ai.generate({
-          model: 'ollama/llama3.1:8b',
+          model: 'openai/qwen2.5-coder-7b-instruct',
           prompt,
         });
 

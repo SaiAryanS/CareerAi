@@ -51,14 +51,22 @@ const generateInterviewQuestionsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const response = await fetch('http://127.0.0.1:11434/api/generate', {
+      const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer lm-studio',
         },
         body: JSON.stringify({
-          model: 'llama3.1:8b',
-          prompt: `You are a senior hiring manager preparing for an interview. Based on the provided Job Description, generate a list of exactly 5 interview questions. The questions should cover the key skills and responsibilities mentioned. They MUST progressively increase in difficulty:
+          model: 'qwen2.5-coder-7b-instruct',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a senior hiring manager preparing for an interview. You generate structured interview questions in JSON format.'
+            },
+            {
+              role: 'user',
+              content: `Based on the provided Job Description, generate a list of exactly 5 interview questions. The questions should cover the key skills and responsibilities mentioned. They MUST progressively increase in difficulty:
 - Question 1: A basic introductory or screening question.
 - Questions 2-3: Intermediate questions about specific skills or experiences.
 - Questions 4-5: Advanced, scenario-based, or behavioral questions that require deep thought.
@@ -67,21 +75,21 @@ Job Description:
 ${input.jobDescription}
 
 You MUST respond with ONLY a valid JSON object matching this structure (no markdown, no explanation, just the raw JSON):
-{"questions": ["<question1>", "<question2>", "<question3>", "<question4>", "<question5>"]}`,
-          format: 'json',
-          stream: false,
-          options: {
-            temperature: 0.8,
-          },
+{"questions": ["<question1>", "<question2>", "<question3>", "<question4>", "<question5>"]}`
+            }
+          ],
+          temperature: 0.8,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('LM Studio API error response:', errorText);
+        throw new Error(`LM Studio API error: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
-      let responseText = data.response;
+      let responseText = data.choices[0].message.content;
 
       // Clean up the response
       responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -151,14 +159,22 @@ const evaluateInterviewAnswerFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const response = await fetch('http://127.0.0.1:11434/api/generate', {
+      const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer lm-studio',
         },
         body: JSON.stringify({
-          model: 'llama3.1:8b',
-          prompt: `You are an expert interviewer evaluating a candidate's response. Analyze the user's answer in the context of the Job Description and the specific Question asked.
+          model: 'qwen2.5-coder-7b-instruct',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert interviewer evaluating candidate responses. You provide scores and feedback in JSON format.'
+            },
+            {
+              role: 'user',
+              content: `Analyze the user's answer in the context of the Job Description and the specific Question asked.
 
 Your evaluation should be fair and constructive. Avoid being overly harsh for minor omissions, but remain realistic about the quality of the answer. A good answer is clear, relevant, and demonstrates the skills required in the job description.
 
@@ -174,21 +190,21 @@ User's Answer:
 Provide a score from 1 to 10 based on the quality of the answer (clarity, relevance, accuracy). Also, provide concise, constructive feedback explaining the score. Be specific about what was good and what could be improved.
 
 You MUST respond with ONLY a valid JSON object matching this structure (no markdown, no explanation, just the raw JSON):
-{"score": <number 1-10>, "feedback": "<constructive feedback string>"}`,
-          format: 'json',
-          stream: false,
-          options: {
-            temperature: 0.5,
-          },
+{"score": <number 1-10>, "feedback": "<constructive feedback string>"}`
+            }
+          ],
+          temperature: 0.5,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('LM Studio API error response:', errorText);
+        throw new Error(`LM Studio API error: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
-      let responseText = data.response;
+      let responseText = data.choices[0].message.content;
 
       // Clean up the response
       responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
