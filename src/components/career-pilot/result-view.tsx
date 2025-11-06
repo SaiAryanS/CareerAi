@@ -23,14 +23,14 @@ export function ResultView({ result, onTryAgain, jobDescription, jobTitle }: Res
   const displayScore = result.matchScore > 1 ? result.matchScore : Math.round(result.matchScore * 100);
 
   const getStatusStyle = () => {
-    if (displayScore >= 75) {
+    if (displayScore >= 70) {
       return {
         bgColor: 'bg-green-500/10',
         textColor: 'text-green-400',
         icon: <CheckCircle2 className="h-5 w-5" />,
         statusText: 'Approved',
       };
-    } else if (displayScore >= 50) {
+    } else if (displayScore >= 55) {
       return {
         bgColor: 'bg-yellow-500/10',
         textColor: 'text-yellow-400',

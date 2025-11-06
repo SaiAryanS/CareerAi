@@ -160,7 +160,9 @@ ${analysisResult.missingSkills.length > 0
 
 ${analysisResult.matchScore >= 70 
   ? `🎯 **Strong Match!** Your resume shows excellent alignment with this role!\n\nWould you like me to generate some interview practice questions to help you prepare?` 
-  : `💡 **Improvement Areas:** Consider gaining experience or certifications in the missing skills to strengthen your candidacy.\n\nWould you like me to analyze another resume or provide guidance on how to address these gaps?`}
+  : analysisResult.matchScore >= 55
+  ? `⚠️ **Moderate Match** - You have potential but there are some skill gaps to address.\n\nConsider gaining experience or certifications in the missing skills to strengthen your candidacy.`
+  : `💡 **Improvement Needed** - There are significant skill gaps for this role.\n\nWould you like me to analyze another resume or provide guidance on how to address these gaps?`}
       `;
     }
     

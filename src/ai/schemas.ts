@@ -33,7 +33,7 @@ export const AnalyzeSkillsOutputSchema = z.object({
     ),
   status: z
     .string()
-    .describe('Status based on match score: "Approved", "Needs Improvement", or "Not a Match".'),
+    .describe('Status based on match score: "Approved" (70-100, strong match), "Needs Improvement" (55-69), or "Not a Match" (0-54).'),
 });
 export type AnalyzeSkillsOutput = z.infer<typeof AnalyzeSkillsOutputSchema>;
 

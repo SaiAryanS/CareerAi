@@ -94,6 +94,23 @@ async function isValidResume(documentText: string): Promise<boolean> {
       return false;
     }
 
+    // Use pattern matching first for quick validation (accepts most resumes)
+    const resumeKeywords = [
+      /\b(skills?|education|experience|projects?)\b/i,
+      /\b(email|phone|linkedin|github)\b/i,
+      /\b(developer|engineer|analyst|designer|manager)\b/i,
+      /\b(university|college|bachelor|master|degree)\b/i,
+      /\b(python|java|javascript|react|node|sql|aws|docker)\b/i,
+    ];
+
+    // If document contains at least 2 resume indicators, likely a resume
+    const matchCount = resumeKeywords.filter(pattern => pattern.test(documentText)).length;
+    if (matchCount >= 2) {
+      console.log('Document matches resume patterns, accepting as valid resume');
+      return true;
+    }
+
+    // Fall back to AI validation for edge cases
     const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
       method: 'POST',
       headers: { 
@@ -105,23 +122,23 @@ async function isValidResume(documentText: string): Promise<boolean> {
         messages: [
           {
             role: 'system',
-            content: 'You are a document classifier. Your job is to determine if a document is a resume/CV or not. A resume typically contains: contact information, work experience, education, skills, and professional summary. Respond with only "true" or "false".'
+            content: 'You are a LENIENT document classifier. Accept ANY document that could be a resume/CV, including creative layouts, portfolios, or unconventional formats. Only reject obvious non-resumes like academic papers, reports, or invoices. Respond with only "true" or "false".'
           },
           {
             role: 'user',
-            content: `Analyze this document and determine if it is a resume or CV. Look for typical resume sections like:
-- Contact information (name, email, phone)
-- Work experience or employment history
-- Education background
-- Skills section (technical, soft skills)
-- Professional summary or objective
+            content: `Determine if this is a resume/CV. Be LENIENT - accept any document that shows:
+- ANY mention of skills, experience, or projects
+- Contact info (name, email, phone) OR professional profile
+- Education OR work history
+- Technical skills OR professional abilities
 
-Documents that are NOT resumes include: project reports, academic papers, hackathon reports, research papers, articles, letters, invoices, etc.
+ACCEPT: Traditional resumes, modern layouts, creative designs, portfolios, CVs
+REJECT ONLY: Academic papers, project reports, research documents, invoices, letters
 
 DOCUMENT TEXT:
 ${documentText.substring(0, 2000)}
 
-Respond with ONLY "true" if this is a resume/CV, or "false" if it is not. No other text.`
+Respond with ONLY "true" if this could be a resume/CV, or "false" if it's clearly not. When in doubt, say "true".`
           }
         ],
         temperature: 0.1,
@@ -130,19 +147,19 @@ Respond with ONLY "true" if this is a resume/CV, or "false" if it is not. No oth
     });
 
     if (!response.ok) {
-      console.warn('Resume validation failed, defaulting to false');
-      return false;
+      console.warn('Resume validation API failed, defaulting to TRUE (accept resume)');
+      return true; // Changed: Default to accepting if validation fails
     }
 
     const data = await response.json();
     const result = data.choices[0].message.content.trim().toLowerCase();
     const isResume = result.includes('true');
     
-    console.log('Resume validation result:', isResume);
+    console.log('AI resume validation result:', isResume);
     return isResume;
   } catch (error) {
     console.error('Resume validation error:', error);
-    return false; // Default to false if validation fails
+    return true; // Changed: Default to accepting if validation fails
   }
 }
 
@@ -162,18 +179,40 @@ async function analyzeResume(resumeText: string, jobDescription: string): Promis
         messages: [
           {
             role: 'system',
-            content: 'You are an expert resume analyzer. You carefully read the entire resume text and identify ALL skills mentioned, including programming languages, frameworks, and technologies. You are thorough and do not miss any skills.'
+            content: 'You are an expert technical recruiter with balanced professional judgment. You provide fair but realistic assessments, recognizing both strengths and gaps. You read resumes thoroughly and evaluate honestly.'
           },
           {
             role: 'user',
-            content: `Carefully analyze this resume against the job description. READ THE ENTIRE RESUME TEXT CAREFULLY to identify ALL skills present.
+            content: `Perform a REALISTIC and BALANCED analysis of this resume against the job description. READ THE ENTIRE RESUME TEXT CAREFULLY to identify all skills present and assess fairly.
 
-IMPORTANT INSTRUCTIONS:
+⚠️ SCORING GUIDELINES:
+- Be moderately strict but fair
+- Most candidates should score 40-70%
+- Strong matches score 70-85%
+- Exceptional matches score 85%+
+
+SKILL IDENTIFICATION:
 - Look for skills anywhere in the resume text (skills section, experience, projects, education)
 - Consider variations (e.g., "HTML5" matches "HTML", "CSS3" matches "CSS", "Python 3" matches "Python")
 - Look for skills in context (e.g., "built with Python", "using HTML/CSS", "developed in JavaScript")
-- Be thorough - don't mark skills as missing if they appear ANYWHERE in the resume text
 - Case-insensitive matching (HTML = html = Html)
+- Give credit for demonstrated skills, even if mentioned briefly
+
+BALANCED SCORING FORMULA:
+1. Identify Core (must-have) vs Preferred (nice-to-have) skills from job description
+2. Calculate score:
+   - Each Core Skill matched: +7 points
+   - Each Core Skill missing: -8 points (moderate penalty)
+   - Each Preferred Skill matched: +3 points
+   - Each Preferred Skill missing: -1 point (light penalty)
+   - Project Quality Multiplier: 0.9 to 1.15 (can boost or reduce)
+   - If missing >40% of core skills: cap score at 60%
+   - If missing >60% of core skills: cap score at 45%
+
+STATUS THRESHOLDS (REASONABLE):
+- 75-100: Approved (strong match with most core skills)
+- 55-74: Needs Improvement (has potential but notable gaps)
+- 0-54: Not a Match (too many critical skill gaps)
 
 JOB DESCRIPTION:
 ${jobDescription}

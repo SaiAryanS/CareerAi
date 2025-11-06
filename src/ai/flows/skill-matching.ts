@@ -24,6 +24,23 @@ async function isValidResume(documentText: string): Promise<boolean> {
       return false;
     }
 
+    // Use pattern matching first for quick validation (accepts most resumes)
+    const resumeKeywords = [
+      /\b(skills?|education|experience|projects?)\b/i,
+      /\b(email|phone|linkedin|github)\b/i,
+      /\b(developer|engineer|analyst|designer|manager)\b/i,
+      /\b(university|college|bachelor|master|degree)\b/i,
+      /\b(python|java|javascript|react|node|sql|aws|docker)\b/i,
+    ];
+
+    // If document contains at least 2 resume indicators, likely a resume
+    const matchCount = resumeKeywords.filter(pattern => pattern.test(documentText)).length;
+    if (matchCount >= 2) {
+      console.log('Document matches resume patterns, accepting as valid resume');
+      return true;
+    }
+
+    // Fall back to AI validation for edge cases
     const response = await fetch('http://192.168.0.105:1234/v1/chat/completions', {
       method: 'POST',
       headers: { 
@@ -35,23 +52,23 @@ async function isValidResume(documentText: string): Promise<boolean> {
         messages: [
           {
             role: 'system',
-            content: 'You are a document classifier. Your job is to determine if a document is a resume/CV or not. A resume typically contains: contact information, work experience, education, skills, and professional summary. Respond with only "true" or "false".'
+            content: 'You are a LENIENT document classifier. Accept ANY document that could be a resume/CV, including creative layouts, portfolios, or unconventional formats. Only reject obvious non-resumes like academic papers, reports, or invoices. Respond with only "true" or "false".'
           },
           {
             role: 'user',
-            content: `Analyze this document and determine if it is a resume or CV. Look for typical resume sections like:
-- Contact information (name, email, phone)
-- Work experience or employment history
-- Education background
-- Skills section (technical, soft skills)
-- Professional summary or objective
+            content: `Determine if this is a resume/CV. Be LENIENT - accept any document that shows:
+- ANY mention of skills, experience, or projects
+- Contact info (name, email, phone) OR professional profile
+- Education OR work history
+- Technical skills OR professional abilities
 
-Documents that are NOT resumes include: project reports, academic papers, hackathon reports, research papers, articles, letters, invoices, etc.
+ACCEPT: Traditional resumes, modern layouts, creative designs, portfolios, CVs
+REJECT ONLY: Academic papers, project reports, research documents, invoices, letters
 
 DOCUMENT TEXT:
 ${documentText.substring(0, 2000)}
 
-Respond with ONLY "true" if this is a resume/CV, or "false" if it is not. No other text.`
+Respond with ONLY "true" if this could be a resume/CV, or "false" if it's clearly not. When in doubt, say "true".`
           }
         ],
         temperature: 0.1,
@@ -60,19 +77,19 @@ Respond with ONLY "true" if this is a resume/CV, or "false" if it is not. No oth
     });
 
     if (!response.ok) {
-      console.warn('Resume validation failed, defaulting to false');
-      return false;
+      console.warn('Resume validation API failed, defaulting to TRUE (accept resume)');
+      return true; // Changed: Default to accepting if validation fails
     }
 
     const data = await response.json();
     const result = data.choices[0].message.content.trim().toLowerCase();
     const isResume = result.includes('true');
     
-    console.log('Resume validation result:', isResume);
+    console.log('AI resume validation result:', isResume);
     return isResume;
   } catch (error) {
     console.error('Resume validation error:', error);
-    return false; // Default to false if validation fails
+    return true; // Changed: Default to accepting if validation fails
   }
 }
 
@@ -104,42 +121,49 @@ const analyzeSkillsPrompt = ai.definePrompt({
   config: {
     temperature: 0.7,
   },
-  prompt: `You are an expert AI career analyst with the critical eye of a senior hiring manager. Perform a harsh, realistic analysis of the Resume against the Job Description. Focus only on the skills, technologies, and experience explicitly required for the role.
+  prompt: `You are an expert AI career analyst with balanced judgment - realistic but fair. Analyze the Resume against the Job Description with professional objectivity.
+
+⚠️ SCORING GUIDELINE: Be moderately strict. Most candidates should score 40-70%. Strong matches score 70-85%. Exceptional matches score 85%+.
 
 Follow these steps:
 
 1. **Job Description Analysis**
    - Extract required skills and group them as:
      - Core Requirements (must-have for the role)
-     - Preferred Skills (secondary / nice-to-have)
+     - Preferred Skills (nice-to-have)
 
 2. **Resume Analysis**
    - Identify all direct skills from the resume.
-   - **Apply Conceptual Mapping & Skill Equivalency:** This is critical. Map related technologies to the required skills.
+   - **Apply Reasonable Conceptual Mapping:**
      - (e.g., MongoDB in resume -> maps to NoSQL requirement).
      - (e.g., Express.js in resume -> maps to Node.js requirement).
-     - **(e.g., Jenkins + Docker + AWS/Azure in resume -> strongly implies CI/CD Pipeline experience).**
-     - **(e.g., Experience with Django in resume -> should be considered equivalent or very similar to FastAPI if the project context is building APIs).**
-   - Evaluate Project & Accomplishment Quality: distinguish between meaningful usage vs. keyword listing.
+     - (e.g., Jenkins + Docker + AWS/Azure → implies CI/CD Pipeline experience).
+     - (e.g., Django experience → shows backend API skills, transferable to FastAPI)
+   - Evaluate Project Quality: Distinguish between meaningful usage vs. keyword listing.
+   - Give credit for demonstrated skills, even if mentioned briefly.
 
 3. **Implied Skills**
    - Write a concise narrative (impliedSkills) describing inferred skills with concrete examples from the resume.
 
 4. **Gap Analysis**
-   - Matching Skills: list skills that overlap between the JD (Core/Preferred) and the Resume (direct, mapped, or implied).
-   - Missing Skills: list skills required in the JD but are genuinely absent from the Resume, even after conceptual mapping.
+   - Matching Skills: List skills that overlap between the JD and Resume (direct, mapped, or reasonably implied).
+   - Missing Skills: List skills required in the JD but genuinely absent from the Resume.
 
-5. **Weighted Match Score**
-   - Core skills weigh most.
-   - Penalize missing skills proportionally to importance; reduce penalty for close equivalents (like Django for FastAPI).
-   - Ignore irrelevant skills not tied to the JD.
-   - Apply a Project Quality Multiplier (strong relevant projects = higher score).
-   - Return integer matchScore (0–100).
+5. **Balanced Weighted Match Score - SCORING FORMULA:**
+   - Start with base score = 0
+   - For each Core Skill matched: +7 points
+   - For each Core Skill missing: -8 points (moderate penalty)
+   - For each Preferred Skill matched: +3 points
+   - For each Preferred Skill missing: -1 point (light penalty)
+   - Project Quality Multiplier: 0.9 to 1.15 (can boost or reduce based on quality)
+   - If missing more than 40% of core skills: cap score at 60%
+   - If missing more than 60% of core skills: cap score at 45%
+   - Return integer matchScore (0–100). Be fair - recognize both strengths and gaps.
 
-6. **Status**
-   - 75–100 → Approved
-   - 50–74 → Needs Improvement
-   - 0–49 → Not a Match
+6. **Reasonable Status Thresholds**
+   - 70–100 → Approved (strong match with most core skills)
+   - 55–69 → Needs Improvement (has potential but notable gaps)
+   - 0–54 → Not a Match (too many critical skill gaps)
 
 You MUST respond with valid JSON only. Do not include markdown code blocks, explanations, or any text outside the JSON object.
 
@@ -171,48 +195,55 @@ const analyzeSkillsFlow = ai.defineFlow(
           messages: [
             {
               role: 'system',
-              content: 'You are an expert AI career analyst with the critical eye of a senior hiring manager. You thoroughly read resumes to identify ALL skills present before making your assessment. You analyze resumes against job descriptions and provide structured JSON responses.'
+              content: 'You are an expert AI career analyst with balanced, professional judgment. You thoroughly read resumes and provide fair but realistic assessments. You recognize both strengths and gaps honestly.'
             },
             {
               role: 'user',
-              content: `Perform a thorough, realistic analysis of the Resume against the Job Description. READ THE ENTIRE RESUME CAREFULLY to identify all skills before making your assessment.
+              content: `Perform a REALISTIC and BALANCED analysis of the Resume against the Job Description. READ THE ENTIRE RESUME CAREFULLY and assess it fairly.
+
+⚠️ SCORING GUIDELINE: Be moderately strict but fair. Most candidates should score 40-70%. Strong matches score 70-85%. Exceptional matches score 85%+.
 
 Follow these steps:
 
 1. **Job Description Analysis**
    - Extract required skills and group them as:
      - Core Requirements (must-have for the role)
-     - Preferred Skills (secondary / nice-to-have)
+     - Preferred Skills (nice-to-have)
 
-2. **Resume Analysis - CRITICAL: READ ENTIRE RESUME FIRST**
+2. **Resume Analysis - BE THOROUGH AND FAIR**
    - Carefully read through the ENTIRE resume text from start to finish
    - Identify all direct skills from the resume (check skills section, experience, projects, education)
    - Look for skills mentioned in ANY format (e.g., "HTML", "HTML5", "html", "HTML/CSS")
-   - **Apply Conceptual Mapping & Skill Equivalency:** This is critical. Map related technologies to the required skills.
+   - **Apply Reasonable Conceptual Mapping:**
      - (e.g., MongoDB in resume -> maps to NoSQL requirement).
      - (e.g., Express.js in resume -> maps to Node.js requirement).
-     - **(e.g., Jenkins + Docker + AWS/Azure in resume -> strongly implies CI/CD Pipeline experience).**
-     - **(e.g., Experience with Django in resume -> should be considered equivalent or very similar to FastAPI if the project context is building APIs).**
-   - Evaluate Project & Accomplishment Quality: distinguish between meaningful usage vs. keyword listing.
+     - (e.g., Django experience → shows backend API skills, transferable to similar frameworks)
+   - Evaluate Project Quality: Distinguish meaningful usage from keyword listing.
+   - Give credit for demonstrated skills, even if mentioned briefly.
 
 3. **Implied Skills**
    - Write a concise narrative (impliedSkills) describing inferred skills with concrete examples from the resume.
 
 4. **Gap Analysis**
-   - Matching Skills: list skills that overlap between the JD (Core/Preferred) and the Resume (direct, mapped, or implied).
-   - Missing Skills: list skills required in the JD but are genuinely absent from the Resume, even after conceptual mapping.
+   - Matching Skills: List skills with clear evidence in the resume (direct mention OR demonstrated in projects).
+   - Missing Skills: List skills required in the JD but genuinely absent from the Resume.
 
-5. **Weighted Match Score**
-   - Core skills weigh most.
-   - Penalize missing skills proportionally to importance; reduce penalty for close equivalents (like Django for FastAPI).
-   - Ignore irrelevant skills not tied to the JD.
-   - Apply a Project Quality Multiplier (strong relevant projects = higher score).
-   - Return integer matchScore (0–100).
+5. **Balanced Weighted Match Score - USE THIS FAIR FORMULA:**
+   - Start with base score = 0
+   - For each Core Skill matched: +7 points
+   - For each Core Skill missing: -8 points (moderate penalty)
+   - For each Preferred Skill matched: +3 points
+   - For each Preferred Skill missing: -1 point (light penalty)
+   - Project Quality Multiplier: 0.9 to 1.15 (can boost or reduce based on quality)
+   - **AUTOMATIC CAPS:**
+     - If missing >40% of core skills: cap score at 60%
+     - If missing >60% of core skills: cap score at 45%
+   - Return integer matchScore (0–100). Be fair - recognize both strengths and gaps.
 
-6. **Status**
-   - 75–100 → Approved
-   - 50–74 → Needs Improvement
-   - 0–49 → Not a Match
+6. **Reasonable Status Thresholds**
+   - 70–100 → Approved (strong match with most core skills)
+   - 55–69 → Needs Improvement (has potential but notable gaps)
+   - 0–54 → Not a Match (too many critical skill gaps)
 
 Job Description:
 ${input.jobDescription}
