@@ -132,8 +132,13 @@ Follow these steps:
      - Core Requirements (must-have for the role)
      - Preferred Skills (nice-to-have)
 
-2. **Resume Analysis**
-   - Identify all direct skills from the resume.
+2. **Resume Analysis - READ THOROUGHLY**
+   - READ THE ENTIRE RESUME: Check skills section, experience, projects, technologies used
+   - Identify ALL skills from the resume (case-insensitive):
+     * React/ReactJS/React.js → counts as React
+     * AWS/Amazon Web Services → counts as AWS
+     * SQL/MySQL/PostgreSQL → counts as SQL
+     * Git/GitHub → counts as version control
    - **Apply Reasonable Conceptual Mapping:**
      - (e.g., MongoDB in resume -> maps to NoSQL requirement).
      - (e.g., Express.js in resume -> maps to Node.js requirement).
@@ -141,13 +146,18 @@ Follow these steps:
      - (e.g., Django experience → shows backend API skills, transferable to FastAPI)
    - Evaluate Project Quality: Distinguish between meaningful usage vs. keyword listing.
    - Give credit for demonstrated skills, even if mentioned briefly.
+   - **IMPORTANT**: If a skill appears ANYWHERE in resume, don't mark it as missing
 
 3. **Implied Skills**
    - Write a concise narrative (impliedSkills) describing inferred skills with concrete examples from the resume.
 
 4. **Gap Analysis**
-   - Matching Skills: List skills that overlap between the JD and Resume (direct, mapped, or reasonably implied).
-   - Missing Skills: List skills required in the JD but genuinely absent from the Resume.
+   - Matching Skills: List ALL skills that overlap between the JD and Resume:
+     * Direct mentions (e.g., "React" in resume and "React" in JD)
+     * Variations (e.g., "ReactJS" in resume matches "React" in JD)
+     * Related skills (e.g., "Express.js" shows Node.js knowledge)
+     * Skills demonstrated in projects
+   - Missing Skills: ONLY list skills that are TRULY absent from the resume (not mentioned anywhere, not even in projects)
 
 5. **Balanced Weighted Match Score - SCORING FORMULA:**
    - Start with base score = 0
@@ -211,22 +221,40 @@ Follow these steps:
      - Preferred Skills (nice-to-have)
 
 2. **Resume Analysis - BE THOROUGH AND FAIR**
-   - Carefully read through the ENTIRE resume text from start to finish
-   - Identify all direct skills from the resume (check skills section, experience, projects, education)
-   - Look for skills mentioned in ANY format (e.g., "HTML", "HTML5", "html", "HTML/CSS")
+   - CRITICAL: Carefully read through the ENTIRE resume text word-by-word from start to finish
+   - Check EVERYWHERE: skills section, experience descriptions, projects, technologies used, tools mentioned, education
+   - Look for skills mentioned in ANY format, case-insensitive:
+     - React/ReactJS/React.js/react → all count as React
+     - AWS/Amazon Web Services/aws → all count as AWS
+     - SQL/MySQL/PostgreSQL/sql → all count as SQL/database skills
+     - Git/GitHub/git → all count as version control
+     - Azure/Microsoft Azure → all count as Azure
+   - **IMPORTANT**: If a skill appears ANYWHERE in the resume (even once), it counts as present
    - **Apply Reasonable Conceptual Mapping:**
-     - (e.g., MongoDB in resume -> maps to NoSQL requirement).
-     - (e.g., Express.js in resume -> maps to Node.js requirement).
-     - (e.g., Django experience → shows backend API skills, transferable to similar frameworks)
-   - Evaluate Project Quality: Distinguish meaningful usage from keyword listing.
-   - Give credit for demonstrated skills, even if mentioned briefly.
+     - MongoDB in resume → maps to NoSQL requirement
+     - Express.js in resume → maps to Node.js requirement
+     - Jenkins + Docker + AWS/Azure → implies CI/CD Pipeline experience
+     - Django/Flask → shows backend API skills, transferable to similar frameworks
+     - Any cloud provider (AWS/Azure/GCP) → shows cloud computing knowledge
+   - **Project Analysis**: If skills are used in projects, they are PROVEN skills (give full credit)
+   - Give credit for demonstrated skills, even if mentioned briefly
+   - Do NOT mark a skill as missing if it appears ANYWHERE in the resume text
 
 3. **Implied Skills**
    - Write a concise narrative (impliedSkills) describing inferred skills with concrete examples from the resume.
 
-4. **Gap Analysis**
-   - Matching Skills: List skills with clear evidence in the resume (direct mention OR demonstrated in projects).
-   - Missing Skills: List skills required in the JD but genuinely absent from the Resume.
+4. **Gap Analysis - CRITICAL INSTRUCTIONS**
+   - Matching Skills: List ALL skills that appear ANYWHERE in the resume:
+     * Skills explicitly listed in skills section
+     * Technologies mentioned in project descriptions
+     * Tools used in work experience
+     * Skills demonstrated through projects or achievements
+     * Consider case-insensitive and variations (React = ReactJS = React.js)
+   - Missing Skills: ONLY list skills that are:
+     * Required in the job description AND
+     * Completely absent from the resume (not mentioned even once) AND
+     * Cannot be reasonably inferred from related skills
+   - **DOUBLE-CHECK**: Before marking a skill as missing, search the ENTIRE resume text one more time
 
 5. **Balanced Weighted Match Score - USE THIS FAIR FORMULA:**
    - Start with base score = 0
@@ -250,6 +278,16 @@ ${input.jobDescription}
 
 Resume:
 ${input.resume}
+
+**CRITICAL REMINDER BEFORE YOU RESPOND:**
+- Search the resume text for each required skill (case-insensitive, check variations)
+- If you find "React" or "ReactJS" or "React.js" anywhere → add "React" to matchingSkills
+- If you find "AWS" or "Amazon Web Services" anywhere → add "AWS" to matchingSkills  
+- If you find "Azure" or "Microsoft Azure" anywhere → add "Azure" to matchingSkills
+- If you find "SQL" or "MySQL" or "PostgreSQL" anywhere → add "SQL" to matchingSkills
+- If you find "Git" or "GitHub" or "GitLab" anywhere → add "Git" to matchingSkills
+- Check project descriptions for technology mentions
+- Be thorough and accurate
 
 You MUST respond with ONLY a valid JSON object matching this structure (no markdown, no explanation, just the raw JSON):
 {"matchScore": <number 0-100>, "scoreRationale": "<string>", "matchingSkills": ["<string>", ...], "missingSkills": ["<string>", ...], "impliedSkills": "<string>", "status": "<Approved|Needs Improvement|Not a Match>"}`
